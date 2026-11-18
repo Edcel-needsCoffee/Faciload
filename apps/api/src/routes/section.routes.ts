@@ -1,6 +1,6 @@
 import { Router, type Request } from 'express';
 import { ApiError } from '../errors/apiError.js';
-import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
+import { requireAuth, requireManagement } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   createSection,
@@ -42,7 +42,7 @@ sectionRouter.get(
 sectionRouter.post(
   '/sections',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(201).json({ section: await createSection(req.body) });
   }),
@@ -51,7 +51,7 @@ sectionRouter.post(
 sectionRouter.patch(
   '/sections/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(200).json({ section: await updateSection(parseId(req), req.body) });
   }),
@@ -60,7 +60,7 @@ sectionRouter.patch(
 sectionRouter.delete(
   '/sections/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     await deleteSection(parseId(req));
     res.status(204).send();

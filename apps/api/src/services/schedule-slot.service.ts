@@ -108,6 +108,7 @@ export async function listScheduleSlots(rawQuery: unknown): Promise<ScheduleSlot
     termId: query.termId ?? null,
     facultyId: query.facultyId ?? null,
     sectionId: query.sectionId ?? null,
+    roomId: query.roomId ?? null,
   });
   return { data: rows.map(toScheduleSlotDto), meta: { total: rows.length } };
 }
@@ -196,6 +197,7 @@ export async function createScheduleSlot(rawBody: unknown): Promise<ScheduleSlot
   await assertWithinSessionCapacity(assignment, sessionType, hours);
 
   const conflict = await detectPlacementConflict({
+    termId: assignment.term_id,
     facultyId: assignment.faculty_id,
     roomId,
     day: input.day_of_week,
@@ -248,6 +250,7 @@ export async function updateScheduleSlot(id: string, rawBody: unknown): Promise<
   await assertWithinSessionCapacity(existing.workload_assignment, sessionType, hours, id);
 
   const conflict = await detectPlacementConflict({
+    termId: existing.workload_assignment.term_id,
     facultyId: existing.workload_assignment.faculty_id,
     roomId,
     day: (input.day_of_week ?? existing.day_of_week) as DayOfWeek,
@@ -304,6 +307,7 @@ export async function confirmOverride(
   // Re-evaluated only so the audit line records what was bypassed — this path
   // never throws on a conflict.
   const conflict = await detectPlacementConflict({
+    termId: assignment.term_id,
     facultyId: assignment.faculty_id,
     roomId,
     day: input.day_of_week,

@@ -1,3 +1,4 @@
+import { useSectionRevision } from '../hooks/useSectionRevision';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   buildScheduleWorkbook,
@@ -26,11 +27,12 @@ const selectCls =
 
 /**
  * Reports — workload summaries + schedule exports (ui-ux.md §4, FR-07).
- * Chair + Academic Admin only (route-guarded). Frontend-only: aggregates the
+ * Chair only (route-guarded). Frontend-only: aggregates the
  * existing workload-assignment list + department dashboard summary, and reuses
  * the Schedule page's Excel exporter for per-faculty / per-section programs.
  */
 export function ReportsPage(): JSX.Element {
+  const sectionRevision = useSectionRevision();
   const { pushToast } = useToast();
   const termStatus = useTermStore((s) => s.status);
   const loadTerms = useTermStore((s) => s.loadTerms);
@@ -79,7 +81,7 @@ export function ReportsPage(): JSX.Element {
     if (termStatus === 'ready') {
       void load();
     }
-  }, [termStatus, load, reloadTick]);
+  }, [termStatus, load, reloadTick, sectionRevision]);
 
   const facultyById = useMemo(
     () =>

@@ -1,3 +1,4 @@
+import { useSectionRevision } from '../../hooks/useSectionRevision';
 import { useCallback, useEffect, useState } from 'react';
 import { listFaculty, type FacultyMember } from '../../lib/faculty';
 import { getFacultySchedule, type FacultyScheduleView } from '../../lib/schedule-views';
@@ -13,7 +14,7 @@ const selectCls =
  * "Faculty Class Program" — the auto-generated weekly grid for one instructor
  * across all their sections, straight from the master schedule. A FACULTY-role
  * account is always scoped to itself (the API enforces the same rule with a
- * 403); Chairs / Academic Admins pick any faculty member. Also powers the
+ * 403); the Chair can pick any faculty member. Also powers the
  * "My Workload" page via the `selfScoped` prop.
  */
 export function FacultySchedulePage({
@@ -23,6 +24,7 @@ export function FacultySchedulePage({
   selfScoped?: boolean;
   heading?: string;
 }): JSX.Element {
+  const sectionRevision = useSectionRevision();
   const user = useAuthStore((s) => s.user);
   const lockToSelf = selfScoped || user?.role === 'FACULTY';
   const selfFacultyId = user?.facultyId ?? null;
@@ -90,7 +92,7 @@ export function FacultySchedulePage({
 
   useEffect(() => {
     void loadView();
-  }, [loadView, reloadTick]);
+  }, [loadView, reloadTick, sectionRevision]);
 
   return (
     <section aria-labelledby="faculty-schedule-title" className="space-y-4">

@@ -5,8 +5,8 @@ const rawApiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 /**
  * Resolve the API base URL that the browser talks to.
  *
- * - unset/empty  -> `http://localhost:4000`, the default two-port dev setup
- *   (Vite on :5173, Express on :4000).
+ * - unset/empty -> relative requests through Vite's API proxy in development
+ *   or the server serving the built application in production.
  * - `same-origin` (or `/`) -> `''`, i.e. relative `/api/...` requests. The SPA
  *   then calls whichever host served the page, which is what a single-origin
  *   temporary share (share.bat) needs: the tunnel hostname is only known at
@@ -17,7 +17,7 @@ const rawApiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
  */
 function resolveApiBase(raw: string): string {
   const value = raw.trim();
-  if (value === '' ) return 'http://localhost:4000';
+  if (value === '' ) return '';
   if (value === 'same-origin' || value === '/') return '';
   return value.replace(/\/+$/, '');
 }
@@ -56,6 +56,8 @@ function toApiError(status: number, message: string, code?: string, details?: un
 export interface ApiOptions extends RequestInit {
   /** Set false to skip the Authorization header / refresh retry (e.g. login itself). */
   auth?: boolean;
+  /** Return file responses as a Blob instead of parsing JSON. */
+  responseType?: 'json' | 'blob';
 }
 
 /**
@@ -63,7 +65,7 @@ export interface ApiOptions extends RequestInit {
  * and attempts one silent refresh on a 401 before failing.
  */
 export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
-  const { auth = true, headers, ...init } = options;
+  const { auth = true, responseType = 'json', headers, ...init } = options;
 
   const doFetch = async (token: string | null): Promise<Response> => {
     // FormData (multipart uploads) must set its own Content-Type boundary —
@@ -122,6 +124,10 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promi
   }
 
   // 204 No Content (e.g. DELETE) has no body — don't try to parse it.
+  if (responseType === 'blob') {
+    return (await res.blob()) as T;
+  }
+
   const text = await res.text();
   if (!text) {
     return undefined as T;
@@ -135,7 +141,7 @@ export interface LoginResponse {
   user: {
     id: string;
     email: string;
-    role: 'CHAIR' | 'FACULTY' | 'ACADEMIC_ADMIN';
+    role: 'CHAIR' | 'FACULTY';
     facultyId: string | null;
     avatar_url?: string | null;
   };

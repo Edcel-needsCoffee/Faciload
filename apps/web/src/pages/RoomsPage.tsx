@@ -4,6 +4,7 @@ import { Modal } from '../components/Modal';
 import { useToast } from '../components/Toast';
 import { createRoom, listRooms, updateRoom, type Room } from '../lib/rooms';
 import { useAuthStore } from '../store/auth.store';
+import { MANAGEMENT_ROLES } from '../config/navigation';
 
 // Mirrors apps/api/src/validation/room.validation.ts (name required, <=120).
 const roomFormSchema = z.object({
@@ -24,7 +25,7 @@ interface ModalState {
 export function RoomsPage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const { pushToast } = useToast();
-  const canEdit = user?.role === 'CHAIR';
+  const canEdit = Boolean(user && MANAGEMENT_ROLES.includes(user.role));
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');

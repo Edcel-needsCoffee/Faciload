@@ -2,7 +2,7 @@ import { apiFetch } from './api';
 
 /**
  * Client for GET /api/dashboard/summary — the department overview (FR-06/FR-08).
- * The response shape is role-scoped server-side: CHAIR / ACADEMIC_ADMIN get
+ * The response shape is role-scoped server-side: CHAIR gets
  * the department aggregate, FACULTY get only their own personal summary.
  */
 
@@ -149,6 +149,7 @@ export async function uploadAvatar(file: File): Promise<{ avatar_url: string }> 
 }
 
 export interface UpdateMeInput {
+  username?: string;
   email?: string;
   current_password: string;
   new_password?: string;
@@ -163,7 +164,7 @@ export function updateMe(input: UpdateMeInput): Promise<{
   user: {
     id: string;
     email: string;
-    role: 'CHAIR' | 'FACULTY' | 'ACADEMIC_ADMIN';
+    role: 'CHAIR' | 'FACULTY';
     facultyId: string | null;
     avatar_url: string | null;
   };

@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import type { Role } from '../types/domain.js';
+import { MANAGEMENT_ROLES, type Role } from '../types/domain.js';
 import { verifyAccessToken, type AuthTokenPayload } from '../services/auth.service.js';
 
 declare global {
@@ -51,3 +51,6 @@ export function requireRole(...allowedRoles: Role[]): (req: Request, res: Respon
     next();
   };
 }
+
+/** Shared authorization gate for centralized management actions. */
+export const requireManagement = requireRole(...MANAGEMENT_ROLES);

@@ -29,7 +29,7 @@ Core features:
 Overall, the system aims to make faculty workload planning faster, more organized, transparent, and efficient.
 
 ### 1.3 Target Users
-The system is primarily intended for Industrial Engineering department heads or program chairs, faculty members, and academic administrators.
+The system is primarily intended for Industrial Engineering program chairs and faculty members.
 
 ### 1.4 Main Goal
 The main goal of the system is to provide an efficient and organized platform for managing faculty workloads, schedules, and teaching assignments. It should minimize manual processes, prevent scheduling conflicts, promote fair workload distribution, and provide accurate workload records that support better planning and decision-making within the department.
@@ -65,9 +65,8 @@ The main goal of the system is to provide an efficient and organized platform fo
 
 | Role | Description | Main Access |
 |---|---|---|
-| Department Head / Program Chair | Manages and oversees faculty workloads, subjects, and schedules. | Full access to faculty management, workload assignment, schedule management, conflict detection, reports, and system monitoring. |
+| Department Head / Program Chair | Centrally manages faculty workloads, subjects, and schedules. May also create a separate Faculty login linked to their faculty profile for plotting their own workload. | Full access to faculty management, workload assignment, schedule management, conflict detection, reports, and system monitoring. |
 | Faculty Member | Views and monitors assigned workload, subjects, and teaching schedule. | Can view own profile, workload, assigned subjects, and schedules; limited editing access to own information. |
-| Academic Administrator | Assists in monitoring and managing workload records for administrative purposes. | Can view faculty workloads, schedules, and generate reports; cannot make workload assignments or system-level changes. |
 
 ---
 

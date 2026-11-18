@@ -47,7 +47,7 @@ export interface FacultyQuery {
 
 export interface FacultyAccountInput {
   email: string;
-  password: string;
+  password?: string;
 }
 
 export interface FacultyInput {

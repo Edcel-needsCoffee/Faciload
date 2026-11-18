@@ -105,7 +105,7 @@ export async function deleteSection(id: string): Promise<void> {
   if (await sectionRepository.hasAssignments(id)) {
     throw ApiError.conflict(
       'SECTION_IN_USE',
-      'This section still has workload assignments. Remove them before deleting the section.',
+      'This section is linked to active or archived workload assignments and cannot be deleted. You can edit its name or year level.',
       { field: 'section_id', section_id: id },
     );
   }

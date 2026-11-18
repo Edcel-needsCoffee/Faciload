@@ -1,3 +1,4 @@
+import { useSectionRevision } from '../hooks/useSectionRevision';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { z } from 'zod';
 import { Modal } from '../components/Modal';
@@ -17,6 +18,7 @@ import {
   type WorkloadAssignment,
 } from '../lib/workload-assignments';
 import { useAuthStore } from '../store/auth.store';
+import { MANAGEMENT_ROLES } from '../config/navigation';
 
 // Mirrors apps/api/src/validation/faculty.validation.ts: required names,
 // optional rank, FULL_TIME|PART_TIME status, integer max_units in 1..99.
@@ -67,7 +69,7 @@ interface AccountFormValues {
   password: string;
 }
 
-const EMPTY_ACCOUNT: AccountFormValues = { enabled: false, email: '', password: '' };
+const EMPTY_ACCOUNT: AccountFormValues = { enabled: true, email: '', password: '' };
 
 interface FacultyFormValues {
   employee_no: string;
@@ -100,13 +102,13 @@ const SEARCH_DEBOUNCE_MS = 300;
  * Shared faculty directory. `manage = false` renders the view-only Faculty
  * module (browse records + per-member workload, zero mutation controls).
  * `manage = true` renders Faculty Management (create/edit/delete + opt-in
- * login provisioning); those actions still require the CHAIR role, exactly
- * as before the split.
+ * login provisioning); those actions are available to centralized managers.
  */
 function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
+  const sectionRevision = useSectionRevision();
   const user = useAuthStore((s) => s.user);
   const { pushToast } = useToast();
-  const canEdit = manage && user?.role === 'CHAIR';
+  const canEdit = manage && Boolean(user && MANAGEMENT_ROLES.includes(user.role));
 
   const [result, setResult] = useState<FacultyListResult | null>(null);
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');
@@ -185,7 +187,7 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
 
   useEffect(() => {
     void load();
-  }, [load, reloadKey]);
+  }, [load, reloadKey, sectionRevision]);
 
   function toggleSort(sortBy: FacultySortBy): void {
     setSort((current) =>
@@ -215,7 +217,7 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
     });
     setFieldErrors({});
     setFormError(null);
-    setAccount(EMPTY_ACCOUNT);
+    setAccount({ enabled: true, email: faculty.user?.email ?? '', password: '' });
     setAccountErrors({});
     setModal({ mode: 'edit', faculty });
   }
@@ -280,11 +282,12 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
 
     // Opt-in login (create only): validate the account block when the toggle is
     // on, and attach it to the payload so the API provisions the linked login.
-    let accountPayload: { email: string; password: string } | undefined;
-    if (modal.mode === 'create' && account.enabled) {
-      const accountParsed = accountFormSchema.safeParse({
+    let accountPayload: { email: string; password?: string } | undefined;
+    if (account.email.trim() || account.password || modal.mode === 'create') {
+      const schema = modal.mode === 'edit' && modal.faculty?.user ? accountFormSchema.extend({ password: z.string().optional() }) : accountFormSchema;
+      const accountParsed = schema.safeParse({
         email: account.email,
-        password: account.password,
+        password: account.password || undefined,
       });
       if (!accountParsed.success) {
         const flat = accountParsed.error.flatten().fieldErrors;
@@ -349,11 +352,11 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
     deletingFaculty?.user && deletingFaculty.user.is_active ? deletingFaculty.user : null;
 
   return (
-    <section aria-labelledby="faculty-title">
+    <section aria-labelledby="faculty-title" className="faculty-directory">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 id="faculty-title" className="text-2xl font-semibold text-primary-dark">
-            {manage ? 'Faculty Management' : 'Faculty'}
+            Faculty
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             {manage
@@ -427,7 +430,7 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
                 <th scope="col" aria-sort={sortHeaderState('max_units', sort)} className="py-2 pr-4">
                   <SortButton label="Max units" column="max_units" sort={sort} onToggle={toggleSort} />
                 </th>
-                <th scope="col" className="py-2 pr-4">Linked login</th>
+                <th scope="col" className="py-2 pr-4">Login email</th>
                 <th scope="col" className="py-2 pr-4">Workload</th>
                 {canEdit ? <th scope="col" className="py-2 pr-4">Actions</th> : null}
               </tr>
@@ -630,9 +633,9 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
               ) : null}
             </div>
           </div>
-          {modal.mode === 'create' ? (
+          {canEdit ? (
             <div className="rounded border border-slate-200 bg-slate-50 p-3">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <label className="hidden">
                 <input
                   type="checkbox"
                   checked={account.enabled}
@@ -650,7 +653,7 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="faculty-account-email" className="block text-xs font-medium text-slate-700">
-                      Account email
+                      Email for login
                     </label>
                     <input
                       id="faculty-account-email"
@@ -666,11 +669,11 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
                   </div>
                   <div>
                     <label htmlFor="faculty-account-password" className="block text-xs font-medium text-slate-700">
-                      Temporary password
+                      {modal.mode === 'edit' && modal.faculty?.user ? 'New password (optional)' : 'Temporary password'}
                     </label>
                     <input
                       id="faculty-account-password"
-                      type="text"
+                      type="password"
                       autoComplete="off"
                       value={account.password}
                       onChange={(event) => setAccount((a) => ({ ...a, password: event.target.value }))}
@@ -828,10 +831,10 @@ function FacultyDirectory({ manage }: { manage: boolean }): JSX.Element {
 
 /** View-only Faculty module: browse records, search, and per-member workload. */
 export function FacultyPage(): JSX.Element {
-  return <FacultyDirectory manage={false} />;
+  return <FacultyDirectory manage={true} />;
 }
 
-/** Faculty Management module: create/edit/delete + opt-in login provisioning (CHAIR only). */
+/** Faculty Management module: create/edit/delete + opt-in Faculty login provisioning. */
 export function FacultyManagementPage(): JSX.Element {
   return <FacultyDirectory manage={true} />;
 }

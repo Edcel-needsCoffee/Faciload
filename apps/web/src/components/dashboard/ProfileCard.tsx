@@ -6,11 +6,11 @@ import type { AuthUser } from '../../store/auth.store';
 export const ROLE_LABELS: Record<AuthUser['role'], string> = {
   CHAIR: 'Program Chair',
   FACULTY: 'Faculty',
-  ACADEMIC_ADMIN: 'Academic Admin',
 };
 
 /** Derive a display name from the login email (chair accounts have no faculty record). */
-export function displayNameForUser(user: Pick<AuthUser, 'email'> | null): string {
+export function displayNameForUser(user: Pick<AuthUser, 'email' | 'username'> | null): string {
+  if (user?.username?.trim()) return user.username.trim();
   if (!user?.email) return 'There';
   const local = user.email.split('@')[0] ?? '';
   const parts = local.split(/[._-]+/).filter(Boolean);

@@ -7,7 +7,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { useUiStore } from '../../store/ui.store';
 
 const loginFormSchema = z.object({
-  email: z.string().email('Enter a valid email address'),
+  email: z.string().trim().min(1, 'Enter your email').max(320),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -135,8 +135,8 @@ export function LoginModal(): JSX.Element | null {
                   </span>
                   <input
                     id="login-email"
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="glass-input-dark py-3 pl-10 pr-3.5"
@@ -183,7 +183,7 @@ export function LoginModal(): JSX.Element | null {
             </form>
             <div className="mt-6 flex items-center gap-2.5">
               <span aria-hidden="true" className="h-px flex-1 bg-glass-border" />
-              <span className="text-[11px] text-ink-500">FACILOAD · Industrial Engineering Dept.</span>
+              <span className="text-[11px] text-ink-500">FACILOAD · Industrial Technology Dept.</span>
               <span aria-hidden="true" className="h-px flex-1 bg-glass-border" />
             </div>
             <p className="mt-3 text-center text-xs text-ink-300">

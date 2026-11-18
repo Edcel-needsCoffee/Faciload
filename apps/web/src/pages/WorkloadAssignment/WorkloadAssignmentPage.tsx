@@ -1,3 +1,4 @@
+import { useSectionRevision } from '../../hooks/useSectionRevision';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Modal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
@@ -13,6 +14,7 @@ import { listFaculty, type FacultyMember } from '../../lib/faculty';
 import { listSections, type Section } from '../../lib/sections';
 import { listSubjects, type Subject } from '../../lib/subjects';
 import { useAuthStore } from '../../store/auth.store';
+import { MANAGEMENT_ROLES } from '../../config/navigation';
 import { useTermStore } from '../../store/term.store';
 import { AssignmentsTable } from './AssignmentsTable';
 import { AssignmentForm } from './AssignmentForm';
@@ -20,9 +22,10 @@ import { FiltersBar } from './FiltersBar';
 import { createSchema, editSchema, EMPTY_FORM, PAGE_SIZE, SEARCH_DEBOUNCE_MS, type FormField, type FormValues, type ModalState } from './types';
 
 export function WorkloadAssignmentPage(): JSX.Element {
+  const sectionRevision = useSectionRevision();
   const user = useAuthStore((s) => s.user);
   const { pushToast } = useToast();
-  const canEdit = user?.role === 'CHAIR';
+  const canEdit = Boolean(user && MANAGEMENT_ROLES.includes(user.role));
 
   const terms = useTermStore((s) => s.terms);
   const selectedTermId = useTermStore((s) => s.selectedTermId);
@@ -88,7 +91,7 @@ export function WorkloadAssignmentPage(): JSX.Element {
 
   useEffect(() => {
     void loadOptions();
-  }, [loadOptions]);
+  }, [loadOptions, sectionRevision]);
 
   const load = useCallback(async () => {
     const requestId = requestIdRef.current + 1;
@@ -113,7 +116,7 @@ export function WorkloadAssignmentPage(): JSX.Element {
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, sectionRevision]);
 
   function openCreate(): void {
     setFormValues({ faculty_id: '', subject_id: '', section_id: '', term_id: termFilter || selectedTermId || '' });

@@ -1,6 +1,6 @@
 import { Router, type Request } from 'express';
 import { ApiError } from '../errors/apiError.js';
-import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
+import { requireAuth, requireManagement } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   confirmOverride,
@@ -24,7 +24,7 @@ function parseId(req: Request, label: string): string {
 }
 
 // Reads are open to every authenticated role (Faculty sees the grid; the
-// frontend narrows to their own assignments). Writes are CHAIR-only.
+// frontend narrows to their own assignments). Writes are Chair-only.
 scheduleSlotRouter.get(
   '/schedule-slots',
   requireAuth,
@@ -39,7 +39,7 @@ scheduleSlotRouter.get(
 scheduleSlotRouter.post(
   '/schedule-slots',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(201).json({ slot: await createScheduleSlot(req.body) });
   }),
@@ -51,7 +51,7 @@ scheduleSlotRouter.post(
 scheduleSlotRouter.post(
   '/schedule-slots/:id/confirm-override',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     const assignmentId = parseId(req, 'workload assignment');
     const user = req.user;
@@ -68,7 +68,7 @@ scheduleSlotRouter.post(
 scheduleSlotRouter.patch(
   '/schedule-slots/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(200).json({ slot: await updateScheduleSlot(parseId(req, 'schedule slot'), req.body) });
   }),
@@ -77,7 +77,7 @@ scheduleSlotRouter.patch(
 scheduleSlotRouter.delete(
   '/schedule-slots/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     await deleteScheduleSlot(parseId(req, 'schedule slot'));
     res.status(204).send();
@@ -85,12 +85,12 @@ scheduleSlotRouter.delete(
 );
 
 // Bulk reset: clear placed blocks for the term, scoped to all / one faculty /
-// one room. CHAIR-only, and the caller's account password is re-verified so
+// one room. Chair-only, and the caller's account password is re-verified so
 // an unattended session cannot wipe the grid by accident.
 scheduleSlotRouter.post(
   '/schedule-slots/reset',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     const user = req.user;
     const stored = user

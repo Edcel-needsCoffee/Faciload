@@ -5,14 +5,20 @@ import { SessionBootstrap } from './components/auth/SessionBootstrap';
 import { AppShell } from './layouts/AppShell';
 import { DashboardPage } from './pages/DashboardPage';
 import { SubjectsPage } from './pages/SubjectsPage';
-import { FacultyPage, FacultyManagementPage } from './pages/FacultyPage';
+import { FacultyPage } from './pages/FacultyPage';
 import { SchedulePage } from './pages/Schedule/SchedulePage';
 import { SectionSchedulePage } from './pages/Views/SectionSchedulePage';
 import { FacultySchedulePage } from './pages/Views/FacultySchedulePage';
 import { RoomSchedulePage } from './pages/Views/RoomSchedulePage';
 import { WorkloadPage } from './pages/WorkloadPage';
+import { TeachingLoadPage } from './pages/TeachingLoadPage';
+import { WeeklyFunctionPlannerPage } from './pages/WeeklyFunctionPlannerPage';
+import { ProgramPrintPage } from './pages/ProgramPrintPage';
+import { FormSettingsPage } from './pages/FormSettingsPage';
+import { DesignationsPage } from './pages/DesignationsPage';
 import { WorkloadAssignmentPage } from './pages/WorkloadAssignment/WorkloadAssignmentPage';
 import { RoomsPage } from './pages/RoomsPage';
+import { SectionsPage } from './pages/SectionsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { AccountSettingsPage } from './pages/AccountSettingsPage';
 import { NotAuthorizedPage } from './pages/NotAuthorizedPage';
@@ -21,11 +27,11 @@ import { ToastProvider } from './components/Toast';
 import { ALL_ROLES, MANAGEMENT_ROLES } from './config/navigation';
 import type { AuthRole } from './store/auth.store';
 
-/** Reports: Chair + Academic Admin (ui-ux.md §4). */
-const REPORTS_ROLES: AuthRole[] = ['CHAIR', 'ACADEMIC_ADMIN'];
+/** Reports: centralized Chair access. */
+const REPORTS_ROLES: AuthRole[] = MANAGEMENT_ROLES;
 
-/** My Workload: Chair + Faculty. */
-const MY_WORKLOAD_ROLES: AuthRole[] = ['CHAIR', 'FACULTY'];
+/** My Workload: management can choose a faculty member; faculty is self-scoped. */
+const MY_WORKLOAD_ROLES: AuthRole[] = [...MANAGEMENT_ROLES, 'FACULTY'];
 
 export function App(): JSX.Element {
   return (
@@ -39,10 +45,26 @@ export function App(): JSX.Element {
           {/* Public landing: full-bleed marketing layout (own nav/footer). */}
           <Route path="/" element={<Landing />} />
           {/* Direct-link entry: same landing base with modal open on mount. */}
-          <Route path="/login" element={<Landing openLoginOnMount />} />
+          <Route path="/login" element={<Landing />} />
           {/* Authenticated-app shell (nav + constrained content width). */}
           <Route element={<AppShell />}>
             <Route path="/not-authorized" element={<NotAuthorizedPage />} />
+            <Route
+              path="/print/:kind/:id"
+              element={
+                <RequireAuth allowedRoles={ALL_ROLES}>
+                  <ProgramPrintPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/form-settings"
+              element={
+                <RequireAuth allowedRoles={MANAGEMENT_ROLES}>
+                  <FormSettingsPage />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/dashboard"
               element={
@@ -89,8 +111,24 @@ export function App(): JSX.Element {
             <Route
               path="/workload"
               element={
-                <RequireAuth allowedRoles={['CHAIR', 'FACULTY']}>
+                <RequireAuth allowedRoles={MY_WORKLOAD_ROLES}>
                   <WorkloadPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/teaching-load"
+              element={
+                <RequireAuth allowedRoles={ALL_ROLES}>
+                  <TeachingLoadPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/weekly-planner"
+              element={
+                <RequireAuth allowedRoles={ALL_ROLES}>
+                  <WeeklyFunctionPlannerPage />
                 </RequireAuth>
               }
             />
@@ -110,6 +148,7 @@ export function App(): JSX.Element {
                 </RequireAuth>
               }
             />
+            <Route path="/sections" element={<RequireAuth allowedRoles={MANAGEMENT_ROLES}><SectionsPage /></RequireAuth>} />
             <Route
               path="/subjects"
               element={
@@ -133,14 +172,22 @@ export function App(): JSX.Element {
               path="/faculty-management"
               element={
                 <RequireAuth allowedRoles={MANAGEMENT_ROLES}>
-                  <FacultyManagementPage />
+                  <Navigate to="/faculty" replace />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/designations"
+              element={
+                <RequireAuth allowedRoles={MANAGEMENT_ROLES}>
+                  <DesignationsPage />
                 </RequireAuth>
               }
             />
             <Route
               path="/reports"
               element={
-                <RequireAuth allowedRoles={['CHAIR', 'ACADEMIC_ADMIN']}>
+                <RequireAuth allowedRoles={REPORTS_ROLES}>
                   <ReportsPage />
                 </RequireAuth>
               }

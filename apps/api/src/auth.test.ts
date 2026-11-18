@@ -39,6 +39,14 @@ describe('POST /api/auth/login', () => {
     expect(res.body.user).toMatchObject({ email, role: 'CHAIR', facultyId: null });
   });
 
+  it('accepts the unique email local part as a USN', async () => {
+    const { email, password } = await seedLoginUser();
+    const usn = email.split('@')[0];
+    const res = await request(createApp()).post('/api/auth/login').send({ email: usn, password });
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe(email);
+  });
+
   it('returns 401 with a generic message for a wrong password', async () => {
     const { email } = await seedLoginUser();
     const res = await request(createApp()).post('/api/auth/login').send({ email, password: 'wrong-password' });

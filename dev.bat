@@ -107,8 +107,7 @@ if errorlevel 1 (
 echo.
 echo [FACILOAD] Web app:            http://localhost:5173
 echo [FACILOAD] API health check:   http://localhost:4000/api/health
-echo [FACILOAD] Chair login:        chair.dev@faciload.local / dev-password-change-me
-echo [FACILOAD] Admin login:        admin.dev@faciload.local / dev-password-change-me
+echo [FACILOAD] Chair login (USN):  admin / password
 echo.
 echo [FACILOAD] Close the two server windows (or run dev-stop.bat) to stop.
 echo.

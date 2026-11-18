@@ -1,6 +1,9 @@
+import { useSectionRevision } from '../../hooks/useSectionRevision';
+import { downloadProgramWorkbook } from '../../lib/program-download';
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -28,6 +31,7 @@ import { Modal } from '../../components/Modal';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { useAuthStore } from '../../store/auth.store';
+import { MANAGEMENT_ROLES } from '../../config/navigation';
 import { selectSelectedTerm, useTermStore } from '../../store/term.store';
 import { CONFLICT_LABELS, toOverrideCandidate } from './schedule-conflict';
 import {
@@ -41,12 +45,7 @@ import {
   stepChunkHours,
 } from './schedule-duration';
 import { listRooms, type Room } from '../../lib/rooms';
-import {
-  buildScheduleWorkbook,
-  downloadWorkbook,
-  exportFileName,
-  loadSchoolLogo,
-} from '../../lib/schedule-export';
+import { exportFileName } from '../../lib/schedule-export';
 import { listFaculty, type FacultyMember } from '../../lib/faculty';
 import { listSections, type Section } from '../../lib/sections';
 import {
@@ -79,8 +78,6 @@ import {
   DAY_END_HOUR,
   DAY_LABELS,
   DAY_START_HOUR,
-  GRID_HEIGHT,
-  HALF_HOUR_HEIGHT,
   HOUR_HEIGHT,
   cellId,
   formatTime12h,
@@ -101,6 +98,7 @@ import {
  */
 const DRAG_DETAILS_CARD_WIDTH = 256; // w-64
 const GRID_EDGE_MARGIN = 24;
+const SCHEDULE_DAY_HEADER_HEIGHT = 28;
 
 /**
  * Combined collision detection (dnd-kit's documented multi-sensor pattern):
@@ -170,11 +168,11 @@ export function chunkPlacement(
  * will have on the grid (the picker's duration for fresh chunks, the slot's
  * own span for moves), so the dragged block previews its real placement size.
  */
-export function overlayHeight(info: DragInfo): number {
+export function overlayHeight(info: DragInfo, hourHeight = HOUR_HEIGHT): number {
   if (info.type === 'new') {
-    return Math.max(18, info.duration * HOUR_HEIGHT);
+    return Math.max(18, info.duration * hourHeight);
   }
-  return slotHeight(timeToMinutes(info.slot.start_time), timeToMinutes(info.slot.end_time));
+  return slotHeight(timeToMinutes(info.slot.start_time), timeToMinutes(info.slot.end_time), hourHeight);
 }
 
 
@@ -195,10 +193,11 @@ interface OverrideState {
 }
 
 export function SchedulePage(): JSX.Element {
+  const sectionRevision = useSectionRevision();
   const user = useAuthStore((s) => s.user);
   const { pushToast } = useToast();
   const reduce = useReducedMotion();
-  const canEdit = user?.role === 'CHAIR';
+  const canEdit = Boolean(user && MANAGEMENT_ROLES.includes(user.role));
 
   // Term (shared with the header selector).
   const termStatus = useTermStore((s) => s.status);
@@ -235,7 +234,7 @@ export function SchedulePage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sectionRevision]);
 
   // Grid data, reloaded when the term changes or after any placement write.
   const [assignments, setAssignments] = useState<WorkloadAssignment[]>([]);
@@ -243,6 +242,8 @@ export function SchedulePage(): JSX.Element {
   const [gridStatus, setGridStatus] = useState<'loading' | 'error' | 'ready'>('loading');
   const [reloadTick, setReloadTick] = useState(0);
   const requestIdRef = useRef(0);
+  const gridBoardRef = useRef<HTMLDivElement | null>(null);
+  const [hourHeight, setHourHeight] = useState(HOUR_HEIGHT);
 
   const loadGrid = useCallback(async () => {
     if (!selectedTermId) {
@@ -273,7 +274,7 @@ export function SchedulePage(): JSX.Element {
 
   useEffect(() => {
     void loadGrid();
-  }, [loadGrid, reloadTick]);
+  }, [loadGrid, reloadTick, sectionRevision]);
 
   // Filters dim non-matching blocks (transition-opacity) instead of hiding them.
   const [filterFacultyId, setFilterFacultyId] = useState('');
@@ -289,6 +290,29 @@ export function SchedulePage(): JSX.Element {
   // and the selected room is also the drop target for new blocks. Faculty and
   // Section act as secondary filters WITHIN the room (dimming non-matches).
   const [selectedRoomId, setSelectedRoomId] = useState('');
+  useLayoutEffect(() => {
+    const board = gridBoardRef.current;
+    if (!board || typeof ResizeObserver === 'undefined') return;
+
+    const fitRows = (): void => {
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        setHourHeight((current) => current === HOUR_HEIGHT ? current : HOUR_HEIGHT);
+        return;
+      }
+      const styles = window.getComputedStyle(board);
+      const verticalPadding = Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom);
+      const availableRows = board.clientHeight - verticalPadding - SCHEDULE_DAY_HEADER_HEIGHT;
+      const fittedHour = Math.floor(availableRows / (DAY_END_HOUR - DAY_START_HOUR));
+      const next = Math.max(22, Math.min(HOUR_HEIGHT, fittedHour));
+      setHourHeight((current) => current === next ? current : next);
+    };
+
+    const observer = new ResizeObserver(fitRows);
+    observer.observe(board);
+    fitRows();
+    return () => observer.disconnect();
+  }, [selectedRoomId, gridStatus]);
+
   const selectedRoom = useMemo(
     () => rooms.find((room) => room.id === selectedRoomId) ?? null,
     [rooms, selectedRoomId],
@@ -719,22 +743,6 @@ export function SchedulePage(): JSX.Element {
     }
   }
 
-  /** Live assignment color per assignment id — the same source the grid uses. */
-  const colorByAssignmentId = useMemo(
-    () => new Map(assignments.map((a) => [a.id, a.color])),
-    [assignments],
-  );
-
-  /** Distinct section programs on the grid, for the form's "Program:" field. */
-  const programLabel = useMemo(() => {
-    const programs = new Set(
-      visibleSlots
-        .map((slot) => slot.section_label.match(/^([A-Z]+)/)?.[1])
-        .filter((code): code is string => Boolean(code)),
-    );
-    return [...programs].sort().join(', ') || 'BSIE';
-  }, [visibleSlots]);
-
   function clearFlash(id: string): void {
     setFlashIds((ids) => ids.filter((flashId) => flashId !== id));
   }
@@ -743,9 +751,7 @@ export function SchedulePage(): JSX.Element {
    * Export the visible room's schedule as the printed Classroom Utilization
    * form, as a real .xlsx so Windows opens it in Excel.
    *
-   * Uses the *filtered* slots (what is on screen right now) and the live
-   * assignment colors, so the sheet matches both the current view and the
-   * colors chosen for each subject.
+   * Reuses the server room exporter and Form Settings, matching FlowSched.
    */
   async function handleExport(): Promise<void> {
     if (exporting) {
@@ -753,35 +759,8 @@ export function SchedulePage(): JSX.Element {
     }
     setExporting(true);
     try {
-      // The seal lives in apps/web/public; several filenames are tried, and if
-      // none are present the sheet is simply exported without it.
-      const logo = await loadSchoolLogo();
-      const buffer = await buildScheduleWorkbook({
-        header: {
-          title: 'CLASSROOM UTILIZATION',
-          subtitle: term?.label ?? 'Active term',
-          institution: [
-            'Republic of the Philippines',
-            'Palompon Institute of Technology',
-            'Palompon, Leyte',
-          ],
-          college: 'College of Technology and Engineering',
-          room: selectedRoom?.name ?? '—',
-          program: programLabel,
-          major: '',
-          yearSection: '',
-        },
-        slots: visibleSlots,
-        days: DAYS,
-        startHour: DAY_START_HOUR,
-        endHour: DAY_END_HOUR,
-        colorFor: (slot) => colorByAssignmentId.get(slot.workload_assignment_id) ?? slot.color,
-        logo,
-      });
-      downloadWorkbook(
-        buffer,
-        `${exportFileName('Classroom Utilization', selectedRoom?.name, term?.label)}.xlsx`,
-      );
+      if (!selectedRoomId || !selectedTermId) return;
+      await downloadProgramWorkbook('rooms', selectedRoomId, selectedTermId, exportFileName('Classroom Utilization', selectedRoom?.name, term?.label));
       pushToast('success', 'Excel file downloaded.');
     } catch {
       pushToast('error', 'Could not build the Excel file.');
@@ -800,6 +779,8 @@ export function SchedulePage(): JSX.Element {
   );
   // The gutter renders a range label per half-hour row, not one per hour.
   const rows = useMemo(() => halfHourRows(), []);
+  const halfHourHeight = hourHeight / 2;
+  const scheduleGridHeight = (DAY_END_HOUR - DAY_START_HOUR) * hourHeight;
 
   /**
    * Cells the drop preview lights up: the anchor cell plus however many
@@ -843,8 +824,8 @@ export function SchedulePage(): JSX.Element {
     const color = rawColor && HEX_COLOR_PATTERN.test(rawColor) ? rawColor : '#FFE3E8';
     return {
       day: anchor.day,
-      top: slotTop(startMinutes),
-      height: overlayHeight(activeDrag),
+      top: slotTop(startMinutes, hourHeight),
+      height: overlayHeight(activeDrag, hourHeight),
       color,
       text: readableTextColor(color),
       title:
@@ -859,14 +840,14 @@ export function SchedulePage(): JSX.Element {
   }, [activeDrag, dragOverCell]);
 
   return (
-    <section aria-labelledby="schedule-title" className="space-y-4">
+    <section aria-labelledby="schedule-title" className="schedule-page">
       {/* Sticky command bar — identity, scope filters, and actions in ONE strip.
           Deliberately restructured from the old two-block layout (a header row
           with top-right actions, then a separate filters-only card) so the Chair
           workspace reads differently. Actions relocate to the far right of the
           unified bar, grouped as a segmented cluster after the scope filters. */}
-      <div className="sticky top-0 z-20 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
+      <div className="schedule-command-bar sticky top-0 z-20 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur">
+        <div className="schedule-toolbar-layout flex flex-wrap items-center gap-x-4 gap-y-2.5">
           <div className="flex items-center gap-2.5">
             <span
               aria-hidden="true"
@@ -884,7 +865,7 @@ export function SchedulePage(): JSX.Element {
 
           <span aria-hidden="true" className="hidden h-6 w-px bg-slate-200 sm:block" />
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="schedule-scope-filters flex flex-wrap items-center gap-x-4 gap-y-2">
             <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
               Room
               <select
@@ -937,7 +918,8 @@ export function SchedulePage(): JSX.Element {
           </div>
 
           {canEdit ? (
-            <div className="ml-auto flex items-center gap-2 border-l border-slate-200 pl-4">
+            <div className="schedule-toolbar-actions ml-auto flex items-center gap-2 border-l border-slate-200 pl-4">
+              {selectedRoomId && selectedTermId && <a href={`/print/rooms/${selectedRoomId}?termId=${selectedTermId}`} className="inline-flex min-h-9 items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">Print room schedule</a>}
               <button
                 type="button"
                 onClick={() => void handleExport()}
@@ -1025,22 +1007,22 @@ export function SchedulePage(): JSX.Element {
           {visibleSlots.length === 0 ? (
             <p
               role="status"
-              className="mb-3 rounded-xl border border-dashed border-leaf-200 bg-white px-4 py-3 text-center text-sm text-ink/60"
+              className="schedule-empty-message rounded-xl border border-dashed border-leaf-200 bg-white px-4 py-2 text-center text-xs text-ink/60"
             >
               No classes scheduled in {selectedRoom?.name ?? 'this room'} yet — drag a class from
               the panel to place one.
             </p>
           ) : null}
-          <div className="flex items-start gap-4 flex-row-reverse" data-testid="schedule-grid">
+          <div className="schedule-grid-row flex items-start gap-4 flex-row-reverse" data-testid="schedule-grid">
             {/* Right rail: unassigned classes. The page-level room selector is
                 the drop target — no second room picker. Reversed vs. the old
                 layout so the week grid owns the primary (left) area. */}
-            <aside className="w-72 shrink-0 space-y-3 glass-card rounded-2xl p-4 shadow-sm">
+            <aside className="schedule-assignment-rail w-72 shrink-0 space-y-3 glass-card rounded-2xl p-4 shadow-sm">
               <div>
                 <h2 className="text-sm font-semibold text-ink">Unassigned classes</h2>
                 <p className="text-xs text-ink/50">{term ? term.label : 'Loading term…'}</p>
               </div>
-              <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+              <div className="schedule-assignment-list space-y-2 overflow-y-auto pr-1">
                 {unassignedChunks.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-leaf-200 px-3 py-4 text-center text-xs text-ink/60">
                     {assignments.length === 0
@@ -1076,11 +1058,11 @@ export function SchedulePage(): JSX.Element {
             {/* Time-gutter + day columns. Each day column is a droppable hour
                 stack; placed blocks are absolutely positioned by start/end
                 time (faciload.html block math). */}
-            <div className="flex min-w-0 flex-1 overflow-x-auto glass-card rounded-2xl p-4 shadow-sm">
+            <div ref={gridBoardRef} data-testid="schedule-board" className="schedule-grid-board flex min-w-0 flex-1 overflow-x-auto glass-card rounded-2xl p-4 shadow-sm">
               {/* `flex-1` on the inner row matters: without an explicit width the
                   flex row collapses to its content and the day columns stop
                   filling the panel, leaving dead space on the right. */}
-              <div className="flex min-w-full flex-1">
+              <div className="schedule-grid-columns flex min-w-full flex-1">
                 {/* Time gutter. One label per HALF-HOUR row, showing the row's
                     full `start - end` span so the exact drop target is readable
                     at a glance. `whitespace-nowrap` is load-bearing: without it
@@ -1088,12 +1070,13 @@ export function SchedulePage(): JSX.Element {
                     with their rows. Height must match the grid cells exactly. */}
                 {/* Wide enough for the longest label, the 11:30 AM - 12:00 PM row,
                     which is the one range that carries a marker on both ends. */}
-                <div className="w-[124px] shrink-0 pt-7 pr-3" aria-hidden="true">
+                <div className="schedule-time-gutter w-[124px] shrink-0 pr-3" aria-hidden="true">
+                  <div aria-hidden="true" style={{ height: SCHEDULE_DAY_HEADER_HEIGHT }} />
                   {rows.map((row) => (
                     <div
                       key={row.key}
                       className="flex items-center justify-end whitespace-nowrap text-right font-mono text-[11px] leading-none tabular-nums text-ink/70"
-                      style={{ height: HALF_HOUR_HEIGHT }}
+                      style={{ height: halfHourHeight }}
                     >
                       {rangeLabel(row)}
                     </div>
@@ -1104,7 +1087,7 @@ export function SchedulePage(): JSX.Element {
                   return (
                     <motion.div
                       key={day}
-                      className="min-w-[132px] flex-1"
+                      className="schedule-day-column min-w-[132px] flex-1"
                       animate={
                         shaking && !reduce ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }
                       }
@@ -1117,28 +1100,30 @@ export function SchedulePage(): JSX.Element {
                         }
                       }}
                     >
-                      <div className="pb-1 text-center text-xs font-semibold uppercase tracking-wide text-ink/60">
+                      <div className="schedule-day-heading pb-1 text-center text-xs font-semibold uppercase tracking-wide text-ink/60">
                         {DAY_LABELS[day]}
                       </div>
-                      <div className="relative border-l border-leaf-300" style={{ height: GRID_HEIGHT }}>
+                      <div className="schedule-day-grid relative border-l border-leaf-300" style={{ height: scheduleGridHeight }}>
                         {hours.map((hour) => (
                           <React.Fragment key={`${day}-${hour}`}>
                             {/* :00 half-hour row (top half of the hour) */}
                             <DropCell
                               id={cellId(day, hour, 0)}
                               highlighted={dropPreview?.has(cellId(day, hour, 0)) ?? false}
+                              cellHeight={halfHourHeight}
                             />
                             {/* Dashed half-hour gridline between :00 and :30. Kept
                                 lighter than the solid hour line so the hour
                                 boundaries still read as the primary structure. */}
                             <div
                               className="absolute left-0 right-0 border-t border-dashed border-leaf-200"
-                              style={{ top: HALF_HOUR_HEIGHT }}
+                              style={{ top: halfHourHeight }}
                             />
                             {/* :30 half-hour row (bottom half of the hour) */}
                             <DropCell
                               id={cellId(day, hour, 1)}
                               highlighted={dropPreview?.has(cellId(day, hour, 1)) ?? false}
+                              cellHeight={halfHourHeight}
                             />
                           </React.Fragment>
                         ))}
@@ -1152,6 +1137,7 @@ export function SchedulePage(): JSX.Element {
                               activeDrag?.type === 'move' && activeDrag.slot.id === slot.id
                             }
                             reducedMotion={Boolean(reduce)}
+                            hourHeight={hourHeight}
                             onFlashComplete={() => clearFlash(slot.id)}
                             onRemove={() => setDeletingSlot(slot)}
                             onInspect={() => setInspectedSlotId(slot.id)}
@@ -1207,7 +1193,7 @@ export function SchedulePage(): JSX.Element {
               <div className="relative">
                 <div
                   className="w-56 cursor-grabbing opacity-60"
-                  style={{ height: overlayHeight(activeDrag) }}
+                  style={{ height: overlayHeight(activeDrag, hourHeight) }}
                 >
                   <AssignmentCardBody
                     title={
@@ -1216,7 +1202,7 @@ export function SchedulePage(): JSX.Element {
                         : activeDrag.slot.subject_code
                     }
                     subtitle={
-                      overlayHeight(activeDrag) >= 56
+                      overlayHeight(activeDrag, hourHeight) >= 56
                         ? activeDrag.type === 'new'
                           ? `${activeDrag.assignment.section_label} · ${activeDrag.assignment.faculty_name}`
                           : `${activeDrag.slot.section_label} · ${activeDrag.slot.faculty_name}`
@@ -1387,7 +1373,7 @@ export function SchedulePage(): JSX.Element {
  * these stay visually neutral — just the grid. `data-drop-preview` is kept on
  * the spanned cells so the multi-cell duration preview is still assertable.
  */
-function DropCell({ id, highlighted = false }: { id: string; highlighted?: boolean }): JSX.Element {
+function DropCell({ id, highlighted = false, cellHeight = HOUR_HEIGHT / 2 }: { id: string; highlighted?: boolean; cellHeight?: number }): JSX.Element {
   const { setNodeRef } = useDroppable({ id });
   return (
     <div
@@ -1396,7 +1382,7 @@ function DropCell({ id, highlighted = false }: { id: string; highlighted?: boole
       // Exposed so tests can assert the multi-cell preview without class names.
       data-drop-preview={highlighted ? 'true' : undefined}
       className="border-b border-leaf-200"
-      style={{ height: HALF_HOUR_HEIGHT }}
+      style={{ height: cellHeight }}
     />
   );
 }
@@ -1902,13 +1888,14 @@ function ColorSwatchPicker({
  * entry clamps with an inline note; 0/negative leaves the card undraggable
  * until fixed.
  */
-function DurationPicker({
+export function DurationPicker({
   value,
   remaining,
   cap,
   note,
   onStep,
   onCommit,
+  minimum = MIN_CHUNK_HOURS,
 }: {
   value: number;
   remaining: number;
@@ -1917,13 +1904,14 @@ function DurationPicker({
   note: string | null;
   onStep: (delta: number) => void;
   onCommit: (raw: string) => void;
+  minimum?: number;
 }): JSX.Element {
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? formatHours(value);
   // The + button stops at whichever is tighter: what's left this week, or one
   // meeting's worth.
   const limit = Math.min(remaining, cap);
-  const atMin = value <= Math.min(MIN_CHUNK_HOURS, remaining) + 1e-9;
+  const atMin = value <= Math.min(minimum, remaining) + 1e-9;
   const atMax = value >= limit - 1e-9;
   const commit = (): void => {
     if (draft === null) {
@@ -1993,6 +1981,7 @@ function PlacedBlock({
   dimmed,
   dragging,
   reducedMotion,
+  hourHeight,
   onFlashComplete,
   onRemove,
   onInspect,
@@ -2002,6 +1991,7 @@ function PlacedBlock({
   dimmed: boolean;
   dragging: boolean;
   reducedMotion: boolean;
+  hourHeight: number;
   onFlashComplete: () => void;
   onRemove: () => void;
   /** Click-to-inspect: open the full record for this block. */
@@ -2050,7 +2040,7 @@ function PlacedBlock({
       className={`absolute left-1 right-1 z-10 cursor-grab touch-none select-none overflow-hidden rounded-md transition-opacity duration-200 ${
         dragging ? 'opacity-40 grayscale-[30%]' : dimmed ? 'opacity-20' : ''
       } ${isDragging ? 'opacity-0' : ''}`}
-      style={{ top: slotTop(start), height: slotHeight(start, end) }}
+      style={{ top: slotTop(start, hourHeight), height: slotHeight(start, end, hourHeight) }}
     >
       <AssignmentCardBody
         title={slot.subject_code}

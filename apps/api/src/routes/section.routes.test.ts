@@ -148,6 +148,20 @@ describe('Sections API', () => {
     expect(blocked.status).toBe(409);
     expect(blocked.body.error.code).toBe('SECTION_IN_USE');
 
+    const edited = await request(createApp()).patch(`/api/sections/${id}`).set('Authorization', `Bearer ${chairToken}`).send({ name: `${PREFIX}Updated`, year_level: 3 });
+    expect(edited.status).toBe(200);
+    expect(edited.body.section.id).toBe(id);
+    const workloads = await request(createApp()).get(`/api/workload-assignments?termId=${term.id}`).set('Authorization', `Bearer ${chairToken}`);
+    expect(workloads.status).toBe(200);
+    expect(workloads.body.data.find((row: { section_id: string }) => row.section_id === id)?.section_label).toBe(`${PREFIX}Updated (Year 3)`);
+
+    // Historical workload links also restrict deletion; return a useful 409,
+    // rather than letting the database foreign key produce a server error.
+    await prisma.workloadAssignment.updateMany({ where: { section_id: id }, data: { deleted_at: new Date() } });
+    const archivedBlocked = await request(createApp()).delete(`/api/sections/${id}`).set('Authorization', `Bearer ${chairToken}`);
+    expect(archivedBlocked.status).toBe(409);
+    expect(archivedBlocked.body.error.code).toBe('SECTION_IN_USE');
+
     // Clean up the assignment, then delete succeeds.
     await prisma.workloadAssignment.deleteMany({ where: { section_id: id } });
     const deleted = await request(createApp())

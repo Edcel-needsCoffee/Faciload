@@ -1,3 +1,4 @@
+import { useSectionRevision } from '../../hooks/useSectionRevision';
 import { useCallback, useEffect, useState } from 'react';
 import { listSections, type Section } from '../../lib/sections';
 import { getSectionSchedule, type SectionScheduleView } from '../../lib/schedule-views';
@@ -15,6 +16,7 @@ const selectCls =
  * hand-filled form per section is replaced, not duplicated.
  */
 export function SectionSchedulePage(): JSX.Element {
+  const sectionRevision = useSectionRevision();
   // Term (shared with the header selector).
   const termStatus = useTermStore((s) => s.status);
   const loadTerms = useTermStore((s) => s.loadTerms);
@@ -49,7 +51,7 @@ export function SectionSchedulePage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sectionRevision]);
 
   const loadView = useCallback(async () => {
     if (!sectionId) {
@@ -67,7 +69,7 @@ export function SectionSchedulePage(): JSX.Element {
 
   useEffect(() => {
     void loadView();
-  }, [loadView, reloadTick]);
+  }, [loadView, reloadTick, sectionRevision]);
 
   const section = sections.find((item) => item.id === sectionId) ?? null;
 

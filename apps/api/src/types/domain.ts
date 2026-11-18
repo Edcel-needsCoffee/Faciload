@@ -10,7 +10,14 @@
 export const DAY_ORDER = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
 
 /** RBAC roles (User.role). */
-export type Role = 'CHAIR' | 'FACULTY' | 'ACADEMIC_ADMIN';
+export type Role = 'CHAIR' | 'FACULTY';
+
+/** The Chair is the single centralized management role. */
+export const MANAGEMENT_ROLES = ['CHAIR'] as const;
+
+export function isManagementRole(role: Role): boolean {
+  return role === 'CHAIR';
+}
 
 /** Faculty employment status (Faculty.employment_status). */
 export type EmploymentStatus = 'FULL_TIME' | 'PART_TIME';

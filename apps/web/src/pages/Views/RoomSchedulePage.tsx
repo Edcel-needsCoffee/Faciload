@@ -1,3 +1,4 @@
+import { useSectionRevision } from '../../hooks/useSectionRevision';
 import { useCallback, useEffect, useState } from 'react';
 import { getRoomsOverview, type RoomsOverview } from '../../lib/schedule-views';
 import { selectSelectedTerm, useTermStore } from '../../store/term.store';
@@ -11,6 +12,7 @@ import { NoScheduleEmptyState, TermPicker, ViewErrorState, ViewLoadingState } fr
  * ScheduleSlot data the master schedule writes.
  */
 export function RoomSchedulePage(): JSX.Element {
+  const sectionRevision = useSectionRevision();
   // Term (shared with the header selector).
   const termStatus = useTermStore((s) => s.status);
   const loadTerms = useTermStore((s) => s.loadTerms);
@@ -45,7 +47,7 @@ export function RoomSchedulePage(): JSX.Element {
 
   useEffect(() => {
     void loadOverview();
-  }, [loadOverview, reloadTick]);
+  }, [loadOverview, reloadTick, sectionRevision]);
 
   const activeRoom = overview?.rooms.find((room) => room.room_id === roomId) ?? null;
 

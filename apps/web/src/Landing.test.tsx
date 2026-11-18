@@ -46,6 +46,13 @@ describe('Landing page', () => {
     expect(screen.queryByText(legacyCta)).not.toBeInTheDocument();
   });
 
+  it('describes the centralized two-role model', () => {
+    renderLandingAt();
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Landing' })).getByRole('button', { name: 'Workflow' }));
+    expect(screen.getByText('2 roles')).toBeInTheDocument();
+    expect(screen.getByText('Chair, Faculty')).toBeInTheDocument();
+  });
+
   it('exposes Log in buttons that open the modal without navigating', () => {
     renderLandingAt();
     const nav = screen.getByRole('navigation', { name: 'Landing' });
@@ -53,7 +60,7 @@ describe('Landing page', () => {
     // Nav holds Log in + the theme toggle (aria-labelled, not "Log in").
     const navScoped = within(nav).getByRole('button', { name: 'Log in' });
     expect(navScoped).toBeInTheDocument();
-    expect(logins.length).toBeGreaterThanOrEqual(3);
+    expect(logins.length).toBeGreaterThanOrEqual(2);
     for (const btn of logins) {
       expect(btn.tagName).toBe('BUTTON');
     }
@@ -105,10 +112,37 @@ describe('Landing page', () => {
     expect(screen.queryByRole('heading', { name: /under control/i })).not.toBeInTheDocument();
   });
 
-  it('keeps the responsive section anchors in place', () => {
+  for (const label of ['Features', 'Command Center', 'Workflow', 'Impact']) {
+    it(`opens ${label} in a dialog and restores focus when closed`, async () => {
+      renderLandingAt();
+      const trigger = within(screen.getByRole('navigation', { name: 'Landing' })).getByRole('button', { name: label });
+      trigger.focus();
+      fireEvent.click(trigger);
+      expect(screen.getByRole('dialog', { name: label })).toBeInTheDocument();
+      await waitFor(() => expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close dialog' })).toHaveFocus());
+      fireEvent.keyDown(document, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(trigger).toHaveFocus();
+    });
+  }
+
+  it('opens the command preview from the hero and switches to teaching load', () => {
     renderLandingAt();
-    expect(document.getElementById('features')).not.toBeNull();
-    expect(document.getElementById('roles')).not.toBeNull();
-    expect(document.getElementById('get-started')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'See what it does' }));
+    const dialog = screen.getByRole('dialog', { name: 'Command Center' });
+    fireEvent.keyDown(within(dialog).getByRole('tab', { name: 'Weekly schedule' }), { key: 'ArrowRight' });
+    expect(within(dialog).getByRole('tab', { name: 'Teaching load' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(dialog).getByRole('tab', { name: 'Teaching load' })).toHaveFocus();
+    expect(within(dialog).getByRole('progressbar', { name: 'Example weekly target' })).toHaveAttribute('aria-valuenow', '36');
+  });
+
+  it('opens information from the mobile menu without opening login', () => {
+    renderLandingAt();
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle navigation menu' }));
+    const menu = screen.getByRole('navigation', { name: 'Landing menu' });
+    fireEvent.click(within(menu).getByRole('button', { name: 'Impact' }));
+    expect(screen.getByRole('dialog', { name: 'Impact' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Landing menu' })).not.toBeInTheDocument();
+    expect(useUiStore.getState().isLoginModalOpen).toBe(false);
   });
 });

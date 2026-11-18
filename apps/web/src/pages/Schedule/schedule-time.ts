@@ -79,13 +79,13 @@ export function formatTime12h(time: string): string {
 }
 
 /** Absolute `top` (px) of a block inside its day column. */
-export function slotTop(startMinutes: number): number {
-  return ((startMinutes - DAY_START_HOUR * 60) / 60) * HOUR_HEIGHT;
+export function slotTop(startMinutes: number, hourHeight = HOUR_HEIGHT): number {
+  return ((startMinutes - DAY_START_HOUR * 60) / 60) * hourHeight;
 }
 
 /** Absolute `height` (px); floored so short blocks stay grabbable. */
-export function slotHeight(startMinutes: number, endMinutes: number): number {
-  return Math.max(18, ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT);
+export function slotHeight(startMinutes: number, endMinutes: number, hourHeight = HOUR_HEIGHT): number {
+  return Math.max(18, ((endMinutes - startMinutes) / 60) * hourHeight);
 }
 
 export function hourLabel(hour: number): string {

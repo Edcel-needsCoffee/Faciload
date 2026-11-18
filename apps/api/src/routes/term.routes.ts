@@ -1,6 +1,6 @@
 import { Router, type Request } from 'express';
 import { ApiError } from '../errors/apiError.js';
-import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
+import { requireAuth, requireManagement } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   createTerm,
@@ -42,7 +42,7 @@ termRouter.get(
 termRouter.post(
   '/terms',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(201).json({ term: await createTerm(req.body) });
   }),
@@ -52,7 +52,7 @@ termRouter.post(
 termRouter.patch(
   '/terms/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(200).json({ term: await updateTerm(parseId(req), req.body) });
   }),

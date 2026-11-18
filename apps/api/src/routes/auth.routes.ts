@@ -20,12 +20,14 @@ function toPublicUser(user: {
   role: string;
   faculty_id: string | null;
   avatar_url?: string | null;
+  username?: string | null;
 }): {
   id: string;
   email: string;
   role: AuthTokenPayload['role'];
   facultyId: string | null;
   avatar_url: string | null;
+  username: string | null;
 } {
   return {
     id: user.id,
@@ -33,6 +35,7 @@ function toPublicUser(user: {
     role: user.role as AuthTokenPayload['role'],
     facultyId: user.faculty_id,
     avatar_url: user.avatar_url ?? null,
+    username: user.username ?? null,
   };
 }
 
@@ -49,8 +52,16 @@ authRouter.post('/auth/login', asyncHandler(async (req: Request, res: Response) 
     return;
   }
 
-  const { email, password } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const { email: rawIdentifier, password } = parsed.data;
+  const identifier = rawIdentifier.trim().toLowerCase();
+  let user = await prisma.user.findUnique({ where: { email: identifier } });
+  if (!user && !identifier.includes('@')) {
+    const matches = await prisma.user.findMany({
+      where: { email: { startsWith: `${identifier}@` } },
+      take: 2,
+    });
+    if (matches.length === 1) user = matches[0];
+  }
 
   // Generic message: never reveal whether the email or password was wrong.
   const invalidCredentials = { error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } };

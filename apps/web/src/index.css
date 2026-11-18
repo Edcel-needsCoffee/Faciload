@@ -56,6 +56,85 @@ body {
   background-color: #ffffff;
 }
 
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  html,
+  body,
+  #root,
+  #root > div,
+  #root main {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #teaching-load-print,
+  #teaching-load-print * {
+    visibility: visible !important;
+  }
+
+  #teaching-load-print {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    padding: 0 !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    font-size: 10pt !important;
+  }
+
+  #teaching-load-print .teaching-load-no-print {
+    display: none !important;
+  }
+
+  #teaching-load-print .teaching-load-print-heading {
+    display: block !important;
+    margin-bottom: 14pt !important;
+    border-bottom: 2px solid #9f1239 !important;
+    padding-bottom: 10pt !important;
+  }
+
+  #teaching-load-print .glass-card {
+    break-inside: avoid;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  #teaching-load-print table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  #teaching-load-print thead {
+    display: table-header-group;
+  }
+
+  #teaching-load-print tr {
+    break-inside: avoid;
+  }
+
+  #teaching-load-print input {
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  #teaching-load-print th,
+  #teaching-load-print td {
+    border-color: #cbd5e1 !important;
+  }
+}
+
 /* Landing motion: smooth anchor scroll + respect reduced-motion prefs. */
 html {
   scroll-behavior: smooth;
@@ -116,3 +195,24 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+.teaching-load-planner .tlp-heading { background:#111; color:#fff; border:1px solid #111; }
+.teaching-load-planner .tlp-time { background:#fff; color:#111; border-color:#111; font-variant-numeric:tabular-nums; }
+.teaching-load-planner .tlp-drop-cell { background:#fff; border-color:#111; }
+.teaching-load-planner .tlp-drop-active { background:#fff !important; }
+.teaching-load-planner .tlp-teaching { background:#fff; color:#111; border:1px solid #111; opacity:1; }
+/* Match the Schedule planner's high-contrast dark grid while keeping each
+   function's inline category color visible. */
+html.dark .teaching-load-planner .tlp-viewport,
+html.dark .teaching-load-planner .tlp-grid,
+html.dark .teaching-load-planner .tlp-day-column { background:#090909 !important; }
+html.dark .teaching-load-planner .tlp-viewport { border-color:#fff !important; }
+html.dark .teaching-load-planner .tlp-heading { background:#111 !important; color:#fff !important; border-color:#fff !important; }
+html.dark .teaching-load-planner .tlp-time { background:#090909 !important; color:#fff !important; border-color:#fff !important; }
+html.dark .teaching-load-planner .tlp-drop-cell { background:#090909 !important; border-color:#fff !important; }
+html.dark .teaching-load-planner .tlp-day-column { border-color:#fff !important; }
+html.dark .teaching-load-planner .tlp-session { color:#111 !important; border:1px solid #fff !important; }
+html.dark .app-bg .teaching-load-planner .tlp-remove { background:#fff !important; color:#111 !important; border-color:#111 !important; }
+html.dark .teaching-load-planner .tlp-teaching { background:#f3f4f6 !important; color:#111 !important; border:1px solid #fff !important; opacity:1 !important; }
+html.dark .teaching-load-planner .tlp-drop-active { background:#303030 !important; color:#fff !important; }
+html.dark .teaching-load-planner .tlp-chip { color:#111 !important; border-color:#111 !important; }
+html.dark .teaching-load-planner .tlp-drag-overlay { color:#111 !important; }

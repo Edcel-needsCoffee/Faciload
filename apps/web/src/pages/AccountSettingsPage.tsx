@@ -1,4 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { apiFetch } from '../lib/api';
+import type { AuthUser } from '../store/auth.store';
 import { ProfileCard } from '../components/dashboard/ProfileCard';
 import { uploadAvatar } from '../lib/dashboard';
 import { useAuthStore } from '../store/auth.store';
@@ -12,6 +14,12 @@ import { PasswordForm } from './AccountPasswordForm';
  */
 export function AccountSettingsPage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const [username, setUsername] = useState(user?.username ?? '');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  useEffect(() => setUsername(user?.username ?? ''), [user?.username]);
   const setAvatarUrl = useAuthStore((s) => s.setAvatarUrl);
   const term = useTermStore(selectSelectedTerm);
 
@@ -63,6 +71,20 @@ export function AccountSettingsPage(): JSX.Element {
             </dl>
           </div>
 
+          <form className="glass-card space-y-3 p-5" onSubmit={async event => {
+            event.preventDefault(); setSaving(true); setMessage('');
+            try {
+              const response = await apiFetch<{user: AuthUser}>('/api/users/me', { method: 'PATCH', body: JSON.stringify({username, current_password: password}) });
+              setUser(response.user); setPassword(''); setMessage('Username saved.');
+            } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not save username'); }
+            finally { setSaving(false); }
+          }}>
+            <h2 className="font-semibold">Display username</h2>
+            <label className="block text-sm">Username<input required maxLength={80} value={username} onChange={event => setUsername(event.target.value)} className="mt-1 block w-full rounded-lg border p-2" /></label>
+            <label className="block text-sm">Current password<input required type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} className="mt-1 block w-full rounded-lg border p-2" /></label>
+            {message && <p role="status">{message}</p>}
+            <button disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-white">{saving ? 'Saving…' : 'Save username'}</button>
+          </form>
           <EmailForm />
           <PasswordForm />
         </div>

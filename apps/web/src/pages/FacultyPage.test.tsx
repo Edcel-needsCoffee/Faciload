@@ -156,8 +156,8 @@ describe('FacultyManagementPage — role-based controls', () => {
     expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
   });
 
-  it('hides all edit controls from the Academic Admin (view-only)', async () => {
-    setRole('ACADEMIC_ADMIN');
+  it('hides all edit controls from Faculty accounts', async () => {
+    setRole('FACULTY');
     renderManagePage();
     await screen.findByText('TST-001');
     expect(screen.queryByRole('button', { name: 'Add Faculty Member' })).not.toBeInTheDocument();

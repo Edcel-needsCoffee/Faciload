@@ -1,5 +1,5 @@
 import { apiAssetUrl } from '../../lib/api';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Avatar with a clean initials fallback: renders the uploaded photo when the
@@ -27,6 +27,7 @@ export function AvatarImage({
 }): JSX.Element {
   const [broken, setBroken] = useState(false);
   const resolved = apiAssetUrl(src);
+  useEffect(() => setBroken(false), [resolved]);
   const showImage = resolved !== null && !broken;
   const sizeCls = size === 'sm' ? 'h-7 w-7 text-[10px]' : size === 'lg' ? 'h-20 w-20 text-xl' : 'h-12 w-12 text-sm';
   return (

@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { ApiError } from '../errors/apiError.js';
-import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
+import { requireAuth, requireManagement } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   createSubject,
@@ -42,7 +42,7 @@ subjectRouter.get(
 subjectRouter.post(
   '/subjects',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(201).json({ subject: await createSubject(req.body) });
   }),
@@ -51,7 +51,7 @@ subjectRouter.post(
 subjectRouter.patch(
   '/subjects/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(200).json({ subject: await updateSubject(parseId(req), req.body) });
   }),
@@ -60,7 +60,7 @@ subjectRouter.patch(
 subjectRouter.delete(
   '/subjects/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     await deleteSubject(parseId(req));
     res.status(204).send();

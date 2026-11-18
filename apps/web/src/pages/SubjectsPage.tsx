@@ -14,6 +14,7 @@ import {
   type SubjectSortDir,
 } from '../lib/subjects';
 import { useAuthStore } from '../store/auth.store';
+import { MANAGEMENT_ROLES } from '../config/navigation';
 
 // Mirrors apps/api/src/validation/subject.validation.ts (units > 0, hours >= 0).
 const subjectFormSchema = z.object({
@@ -55,7 +56,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 export function SubjectsPage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const { pushToast } = useToast();
-  const canEdit = user?.role === 'CHAIR';
+  const canEdit = Boolean(user && MANAGEMENT_ROLES.includes(user.role));
 
   const [result, setResult] = useState<SubjectListResult | null>(null);
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');

@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { ApiError } from '../errors/apiError.js';
-import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
+import { requireAuth, requireManagement } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   createFaculty,
@@ -22,7 +22,7 @@ function parseId(req: Request): string {
 }
 
 // Same shape as subject.routes.ts: reads for any authenticated role,
-// writes CHAIR-only (requirements.md §3).
+// writes are Chair-only.
 facultyRouter.get(
   '/faculty',
   requireAuth,
@@ -42,7 +42,7 @@ facultyRouter.get(
 facultyRouter.post(
   '/faculty',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(201).json({ faculty: await createFaculty(req.body) });
   }),
@@ -51,7 +51,7 @@ facultyRouter.post(
 facultyRouter.patch(
   '/faculty/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(200).json({ faculty: await updateFaculty(parseId(req), req.body) });
   }),
@@ -60,7 +60,7 @@ facultyRouter.patch(
 facultyRouter.delete(
   '/faculty/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     await deleteFaculty(parseId(req), {
       confirmLinkedUser: req.query['confirmLinkedUser'],

@@ -21,23 +21,26 @@ async function main(): Promise<void> {
   const term = await prisma.academicTerm.findUnique({
     where: { school_year_semester: { school_year: '2026-2027', semester: 'FIRST' } },
   });
+  if (!term) {
+    throw new Error('The active academic term could not be loaded after seeding.');
+  }
 
   // Department rooms.
-  for (const name of ['IE Lab 1', 'IE Lab 2', 'Room 301', 'Room 302']) {
+  for (const name of ['INT Lab 1', 'INT Lab 2', 'Room 301', 'Room 302']) {
     await prisma.room.upsert({ where: { name }, update: {}, create: { name } });
   }
 
   // Starter IE subject catalog (units/lecture/lab hours are dev-plausible examples).
-  // IE 105/IE 322/IE 411 all carry BOTH lecture and lab hours so the Schedule
+  // INT 105/INT 322/INT 411 all carry BOTH lecture and lab hours so the Schedule
   // sidebar shows a LECTURE card and a LAB card per subject (each rendered by
   // its own `remaining_*_hours > 0` check — neither gates the other).
   // The `update` clause re-applies the hours on re-seed: the original seed used
   // `update: {}`, so databases seeded before a seed fix kept stale (e.g.
   // lecture_hours: 0) rows forever — the root cause of "no LECTURE cards".
   const subjects = [
-    { code: 'IE 105', title: 'Introduction to Industrial Engineering', units: 3, lecture_hours: 2, lab_hours: 2 },
-    { code: 'IE 322', title: 'Operations Research 1', units: 3, lecture_hours: 2, lab_hours: 2 },
-    { code: 'IE 411', title: 'Methods Engineering', units: 4, lecture_hours: 2, lab_hours: 3 },
+    { code: 'INT 105', title: 'Introduction to Industrial Technology', units: 3, lecture_hours: 2, lab_hours: 2 },
+    { code: 'INT 322', title: 'Industrial Technology Operations', units: 3, lecture_hours: 2, lab_hours: 2 },
+    { code: 'INT 411', title: 'Industrial Technology Methods', units: 4, lecture_hours: 2, lab_hours: 3 },
   ];
   for (const s of subjects) {
     // find-then-write instead of upsert: `subjects.code` has a partial unique
@@ -55,37 +58,47 @@ async function main(): Promise<void> {
     }
   }
 
-  // DEV-ONLY placeholder credentials. Never use these outside local dev;
-  // real password policy + admin provisioning land in Phase 2 (auth).
-  const devPasswordHash = await bcrypt.hash('dev-password-change-me', 10);
-  await prisma.user.upsert({
+  // DEV-ONLY Chair credentials. Never use these outside local development.
+  const chairEmail = 'admin@faciload.local';
+  const chairPasswordHash = await bcrypt.hash('password', 10);
+  const legacyChair = await prisma.user.findUnique({
     where: { email: 'chair.dev@faciload.local' },
-    update: {},
-    create: {
-      email: 'chair.dev@faciload.local',
-      password_hash: devPasswordHash,
-      role: 'CHAIR',
-    },
   });
-  await prisma.user.upsert({
-    where: { email: 'admin.dev@faciload.local' },
-    update: {},
-    create: {
-      email: 'admin.dev@faciload.local',
-      password_hash: devPasswordHash,
-      role: 'ACADEMIC_ADMIN',
-    },
+  const previousChair = await prisma.user.findUnique({
+    where: { email: 'testchair@gmail.com' },
   });
-
+  const previousSeededChair = await prisma.user.findUnique({
+    where: { email: 'testgmail@gmail.com' },
+  });
+  const existingChair = await prisma.user.findUnique({
+    where: { email: chairEmail },
+  });
+  const chairToMigrate = legacyChair ?? previousChair ?? previousSeededChair;
+  if (chairToMigrate && !existingChair) {
+    await prisma.user.update({
+      where: { id: chairToMigrate.id },
+      data: { email: chairEmail, password_hash: chairPasswordHash, role: 'CHAIR' },
+    });
+  } else {
+    await prisma.user.upsert({
+      where: { email: chairEmail },
+      update: { password_hash: chairPasswordHash, role: 'CHAIR' },
+      create: {
+        email: chairEmail,
+        password_hash: chairPasswordHash,
+        role: 'CHAIR',
+      },
+    });
+  }
   // Sections + faculty, so every filter dropdown and the Workload Assignment
   // page's form (faculty × subject × section) have real options on a fresh
   // database. No WorkloadAssignments are seeded on purpose: the Workload
   // Assignment page is the intended first-run path for creating them.
   for (const section of [
-    { year_level: 1, name: 'BSIE 1A' },
-    { year_level: 2, name: 'BSIE 2A' },
-    { year_level: 3, name: 'BSIE 3A' },
-    { year_level: 4, name: 'BSIE 4A' },
+    { year_level: 1, name: 'INT 1A' },
+    { year_level: 2, name: 'INT 2A' },
+    { year_level: 3, name: 'INT 3A' },
+    { year_level: 4, name: 'INT 4A' },
   ]) {
     await prisma.section.upsert({
       where: { year_level_name: section },
@@ -95,9 +108,9 @@ async function main(): Promise<void> {
   }
 
   const facultySeed = [
-    { employee_no: 'IE-0001', first_name: 'Maria', last_name: 'Santos', rank: 'Assistant Professor' },
-    { employee_no: 'IE-0002', first_name: 'Jose', last_name: 'Reyes', rank: 'Instructor I' },
-    { employee_no: 'IE-0003', first_name: 'Liza', last_name: 'Cruz', rank: 'Professor' },
+    { employee_no: 'INT-0001', first_name: 'Maria', last_name: 'Santos', rank: 'Assistant Professor' },
+    { employee_no: 'INT-0002', first_name: 'Jose', last_name: 'Reyes', rank: 'Instructor I' },
+    { employee_no: 'INT-0003', first_name: 'Liza', last_name: 'Cruz', rank: 'Professor' },
   ];
   for (const member of facultySeed) {
     // `faculty.employee_no` also has a partial unique index — find-then-write

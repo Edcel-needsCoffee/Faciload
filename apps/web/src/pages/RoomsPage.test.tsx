@@ -191,8 +191,8 @@ describe('RoomsPage — maintenance toggle', () => {
 });
 
 describe('RoomsPage — role gating', () => {
-  it('hides create/rename and disables the switch for Academic Admin', async () => {
-    setRole('ACADEMIC_ADMIN');
+  it('hides create/rename and disables the switch for Faculty accounts', async () => {
+    setRole('FACULTY');
     renderPage();
     expect(await screen.findByText('IE Lab 1')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Add room' })).not.toBeInTheDocument();

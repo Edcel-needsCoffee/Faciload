@@ -1,6 +1,6 @@
 import { Router, type Request } from 'express';
 import { ApiError } from '../errors/apiError.js';
-import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
+import { requireAuth, requireManagement } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   createWorkloadAssignment,
@@ -22,7 +22,7 @@ function parseId(req: Request): string {
 }
 
 // Reads: any authenticated role (the Schedule sidebar loads these for the
-// active term). Writes: CHAIR.
+// active term). Writes: Chair only.
 workloadAssignmentRouter.get(
   '/workload-assignments',
   requireAuth,
@@ -42,7 +42,7 @@ workloadAssignmentRouter.get(
 workloadAssignmentRouter.post(
   '/workload-assignments',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(201).json({ assignment: await createWorkloadAssignment(req.body) });
   }),
@@ -51,7 +51,7 @@ workloadAssignmentRouter.post(
 workloadAssignmentRouter.delete(
   '/workload-assignments/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     await deleteWorkloadAssignment(parseId(req));
     res.status(204).send();
@@ -61,7 +61,7 @@ workloadAssignmentRouter.delete(
 workloadAssignmentRouter.patch(
   '/workload-assignments/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     const updated = await updateWorkloadAssignment(parseId(req), req.body);
     res.status(200).json({ assignment: updated });

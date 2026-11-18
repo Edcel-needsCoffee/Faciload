@@ -52,12 +52,12 @@ describe('LoginModal', () => {
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
   });
 
-  it('shows client-side validation errors for a bad email', async () => {
+  it('requires a non-empty email identifier', async () => {
     renderModalAt();
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'not-an-email' } });
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: '  ' } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'something' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(await screen.findByText(/valid email/i)).toBeInTheDocument();
+    expect(await screen.findByText('Enter your email')).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
@@ -109,7 +109,7 @@ describe('RequireAuth route guard', () => {
           <Route
             path="/reports"
             element={
-              <RequireAuth allowedRoles={['CHAIR', 'ACADEMIC_ADMIN']}>
+              <RequireAuth allowedRoles={['CHAIR']}>
                 <div>Reports page</div>
               </RequireAuth>
             }
@@ -136,7 +136,7 @@ describe('RequireAuth route guard', () => {
 
   it('allows correct role', () => {
     useAuthStore.getState().login({
-      user: { id: 'u', email: 'a@x.local', role: 'ACADEMIC_ADMIN', facultyId: null },
+      user: { id: 'u', email: 'a@x.local', role: 'CHAIR', facultyId: null },
       accessToken: 'a',
       refreshToken: 'r',
     });

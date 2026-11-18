@@ -63,6 +63,6 @@ export async function remove(id: string): Promise<Section> {
 /** True when any WorkloadAssignment still references the section — the DB
  *  restricts the delete, but a pre-check yields a friendlier 409. */
 export async function hasAssignments(id: string): Promise<boolean> {
-  const count = await prisma.workloadAssignment.count({ where: { section_id: id, deleted_at: null } });
+  const count = await prisma.workloadAssignment.count({ where: { section_id: id } });
   return count > 0;
 }

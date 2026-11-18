@@ -103,6 +103,7 @@ export type CreateFacultyInput = z.infer<typeof createFacultySchema>;
 export const updateFacultySchema = createFacultySchema
   .omit({ account: true })
   .partial()
+  .extend({ account: facultyAccountSchema.extend({ password: facultyAccountSchema.shape.password.optional() }).optional() })
   .strict()
   .refine((data) => Object.keys(data).length > 0, { message: 'Provide at least one field to update' });
 

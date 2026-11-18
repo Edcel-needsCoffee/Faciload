@@ -207,8 +207,24 @@ export async function updateFaculty(id: string, rawBody: unknown): Promise<Facul
   ) {
     await assertEmployeeNoAvailable(input.employee_no, id);
   }
-  const updated = await updateFacultyRow(id, input);
-  return toFacultyDtoFromRow(updated);
+  const { account, ...fields } = input;
+  if (account) {
+    const linked = await prisma.user.findUnique({ where: { faculty_id: id } });
+    const taken = await prisma.user.findUnique({ where: { email: account.email } });
+    if (taken && taken.id !== linked?.id) throw ApiError.conflict('USER_EMAIL_IN_USE', 'This email is already in use');
+    if (!linked && !account.password) throw ApiError.badRequest('A temporary password is required to create a login');
+    const passwordHash = account.password ? await hashPassword(account.password) : undefined;
+    await prisma.$transaction(async (tx) => {
+      await tx.faculty.update({ where: { id }, data: fields });
+      if (linked) await tx.user.update({ where: { id: linked.id }, data: { email: account.email, ...(passwordHash ? { password_hash: passwordHash } : {}) } });
+      else await tx.user.create({ data: { email: account.email, password_hash: passwordHash!, role: 'FACULTY', faculty_id: id } });
+    });
+    const updated = await findActiveWithUserById(id);
+    return toFacultyDto(updated!);
+  }
+  const updated = await updateFacultyRow(id, fields);
+  const withUser = await findActiveWithUserById(id);
+  return withUser ? toFacultyDto(withUser) : toFacultyDtoFromRow(updated);
 }
 
 /**

@@ -1,5 +1,7 @@
 import { apiFetch } from './api';
 
+import { publishSectionChange } from './section-events';
+
 export interface Section {
   id: string;
   year_level: number;
@@ -34,20 +36,25 @@ export function listSections(
   return apiFetch<SectionListResult>(`/api/sections${qs ? `?${qs}` : ''}`);
 }
 
-export function createSection(input: SectionInput): Promise<{ section: Section }> {
-  return apiFetch<{ section: Section }>('/api/sections', {
+export async function createSection(input: SectionInput): Promise<{ section: Section }> {
+  const result = await apiFetch<{ section: Section }>('/api/sections', {
     method: 'POST',
     body: JSON.stringify(input),
   });
+  publishSectionChange();
+  return result;
 }
 
-export function updateSection(id: string, input: Partial<SectionInput>): Promise<{ section: Section }> {
-  return apiFetch<{ section: Section }>(`/api/sections/${id}`, {
+export async function updateSection(id: string, input: Partial<SectionInput>): Promise<{ section: Section }> {
+  const result = await apiFetch<{ section: Section }>(`/api/sections/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
   });
+  publishSectionChange();
+  return result;
 }
 
 export async function deleteSection(id: string): Promise<void> {
   await apiFetch<unknown>(`/api/sections/${id}`, { method: 'DELETE' });
+  publishSectionChange();
 }

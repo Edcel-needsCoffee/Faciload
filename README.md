@@ -78,15 +78,13 @@ Send that URL to your guest, along with a login:
 
 | Role | Email | Password |
 |---|---|---|
-| Chair (all features) | `chair.dev@faciload.local` | `dev-password-change-me` |
-| Academic Admin (all features) | `admin.dev@faciload.local` | `dev-password-change-me` |
+| Chair (all features) | `admin` (USN) | `password` |
 
 Notes and caveats:
 
-- **There is no view-only role.** The only roles are `CHAIR`, `FACULTY` and
-  `ACADEMIC_ADMIN` (`packages/shared/src/index.ts`); Chair and Academic Admin
-  can reach every page, including all create/edit/delete screens. A guest on
-  either account can modify your seeded data.
+- The roles are `CHAIR` and `FACULTY` (`packages/shared/src/index.ts`). Chair
+  has centralized management access; Faculty accounts can manage their own
+  plotted workload. A guest using the Chair account can modify seeded data.
 - The tunnel URL is public and unauthenticated at the edge: anyone who has it
   can log in with the dev credentials above. Close the tunnel when done
   (Ctrl+C in the `share.bat` window).

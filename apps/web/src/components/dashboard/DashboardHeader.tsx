@@ -14,7 +14,6 @@ export function greetingForHour(hour: number): string {
 function StatPill({ label, value }: { label: string; value: string }): JSX.Element {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <span aria-hidden="true" className="h-2 w-2 rounded-full bg-brand-500" />
       <span className="font-medium text-slate-500">{label}</span>
       <span className="font-mono font-semibold text-slate-900">{value}</span>
     </span>
@@ -30,9 +29,9 @@ const TILE_GRADIENTS = [
 function CountCard({ label, value, index }: { label: string; value: number; index: number }): JSX.Element {
   return (
     <div
-      className={`rounded-2xl bg-gradient-to-br ${TILE_GRADIENTS[index % TILE_GRADIENTS.length]} p-5 text-white shadow-[0_16px_36px_-22px_rgba(127,15,38,0.75)]`}
+      className={`dashboard-count-tile rounded-2xl bg-gradient-to-br ${TILE_GRADIENTS[index % TILE_GRADIENTS.length]} p-5 text-white shadow-[0_16px_36px_-22px_rgba(127,15,38,0.75)]`}
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{label}</p>
+      <p className="text-sm font-medium text-white/80">{label}</p>
       <p className="mt-2 font-mono text-4xl font-bold tabular-nums">{value}</p>
     </div>
   );
@@ -61,13 +60,13 @@ export function DashboardHeader({
   now?: Date;
 }): JSX.Element {
   return (
-    <div className="space-y-5">
+    <div className="dashboard-overview space-y-5">
       <div>
         <h1 id="dashboard-title" className="text-3xl font-bold tracking-tight text-slate-900">
           {greetingForHour(now.getHours())}, {greetingName}
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Here&apos;s how the department is doing{termLabel ? ` — ${termLabel}` : ''}.
+          {termLabel || 'Department schedule overview'}
         </p>
       </div>
       <div className="flex flex-wrap gap-2" aria-label="Department stat pills">

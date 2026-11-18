@@ -15,7 +15,15 @@ import { workloadAssignmentRouter } from './routes/workload-assignment.routes.js
 import { scheduleSlotRouter } from './routes/schedule-slot.routes.js';
 import { scheduleViewRouter } from './routes/schedule-view.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
+import { teachingLoadRouter } from './routes/teaching-load.routes.js';
+import { designationRouter } from './routes/designation.routes.js';
+import { facultyDesignationRouter } from './routes/faculty-designation.routes.js';
+import { facultyProgramRouter } from './routes/faculty-program.routes.js';
+import { formRouter } from './routes/form.routes.js';
+import { programFormRouter } from './routes/program-form.routes.js';
+import { exportRouter } from './routes/export.routes.js';
 import { avatarDir } from './services/avatar.service.js';
+import { formLogoDir } from './services/form.service.js';
 import { notFoundHandler } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -34,6 +42,15 @@ export function createApp(): express.Express {
       maxAge: '1h',
     }),
   );
+  app.use('/uploads/form-logos', express.static(formLogoDir(), { fallthrough: false, maxAge: '1h' }));
+  app.get('/school-logo.jpg', (_req, res, next) => {
+    const file = [
+      path.resolve(process.cwd(), '../web/public/school-logo.jpg'),
+      path.resolve(process.cwd(), 'apps/web/public/school-logo.jpg'),
+    ].find((candidate) => fs.existsSync(candidate));
+    if (file) res.sendFile(file);
+    else next();
+  });
 
   app.use('/api', healthRouter);
   app.use('/api', authRouter);
@@ -47,6 +64,13 @@ export function createApp(): express.Express {
   app.use('/api', scheduleSlotRouter);
   app.use('/api', scheduleViewRouter);
   app.use('/api', dashboardRouter);
+  app.use('/api', teachingLoadRouter);
+  app.use('/api', facultyProgramRouter);
+  app.use('/api', formRouter);
+  app.use('/api', programFormRouter);
+  app.use('/api', exportRouter);
+  app.use('/api', designationRouter);
+  app.use('/api', facultyDesignationRouter);
 
   // ---------------------------------------------------------------------------
   // Optional: serve the built SPA (apps/web/dist) from this same origin.

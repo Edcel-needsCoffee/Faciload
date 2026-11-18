@@ -6,6 +6,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   pending?: boolean;
+  panelClassName?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -17,11 +18,12 @@ export function ConfirmDialog({
   message,
   confirmLabel = 'Delete',
   pending = false,
+  panelClassName = '',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): JSX.Element {
   return (
-    <Modal open={open} title={title} onClose={pending ? () => undefined : onCancel}>
+    <Modal open={open} title={title} panelClassName={panelClassName} onClose={pending ? () => undefined : onCancel}>
       <p className="text-sm text-slate-700">{message}</p>
       <div className="mt-6 flex justify-end gap-3">
         <button

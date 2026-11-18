@@ -1,3 +1,4 @@
+import { useSectionRevision } from '../hooks/useSectionRevision';
 ﻿import { useCallback, useEffect, useState } from 'react';
 import {
   getDashboardSummary,
@@ -24,10 +25,11 @@ export const sectionSubCls = 'text-xs text-slate-500';
 
 /**
  * Dashboard â€” department overview (ui-ux.md section 4, FR-06/FR-08).
- * Chair / Academic Admin see live department-wide panels; Faculty see only
+ * Chair sees live department-wide panels; Faculty sees only
  * their own summary. All numbers come from GET /api/dashboard/summary.
  */
 export function DashboardPage(): JSX.Element {
+  const sectionRevision = useSectionRevision();
   // The summary is role-scoped server-side, so it must be re-fetched whenever
   // the signed-in identity changes â€” otherwise a login that swaps users inside
   // one SPA session (chair â†’ faculty) would keep showing the previous user's
@@ -58,7 +60,7 @@ export function DashboardPage(): JSX.Element {
     } catch {
       setStatus('error');
     }
-  }, [selectedTermId, reloadTick, userId, role]);
+  }, [selectedTermId, reloadTick, userId, role, sectionRevision]);
 
   useEffect(() => {
     if (termStatus === 'ready') {
@@ -67,7 +69,7 @@ export function DashboardPage(): JSX.Element {
   }, [termStatus, load]);
 
   return (
-    <section aria-labelledby="dashboard-title" className="space-y-4">
+    <section aria-labelledby="dashboard-title" className="dashboard-workspace space-y-4">
       {status === 'error' ? (
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-8 text-center">
           <p className="text-sm font-medium text-red-700">Couldn&apos;t load the dashboard</p>
@@ -118,7 +120,7 @@ function LoadingSkeleton({ scope }: { scope: 'department' | 'personal' }): JSX.E
 }
 
 /**
- * Chair / Academic Admin dashboard — mockup-matching composition with the
+ * Chair dashboard — mockup-matching composition with the
  * app's leaf/ink theme: header, weekly bars, term ring, room
  * utilization, dark load panel, week preview and rooms list, all fed from
  * the (real) summary payload and animated in top-to-bottom.
@@ -136,7 +138,7 @@ function ChairDashboard({
     <DashboardStagger className="space-y-4">
       <DashboardStaggerItem>
         <DashboardHeader
-          greetingName={user?.email?.split('@')[0] ?? 'there'}
+          greetingName={user?.username || user?.email?.split('@')[0] || 'there'}
           termLabel={termLabel}
           scheduledPercent={summary.term_scheduled_percent}
           roomsInUsePercent={summary.rooms_in_use_percent}

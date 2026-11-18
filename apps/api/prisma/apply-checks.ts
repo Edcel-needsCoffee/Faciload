@@ -23,6 +23,10 @@ const SOFT_DELETE_INDEXES = [
   'CREATE UNIQUE INDEX "subjects_code_key" ON "subjects"("code") WHERE "deleted_at" IS NULL',
   'DROP INDEX IF EXISTS "faculty_employee_no_key"',
   'CREATE UNIQUE INDEX "faculty_employee_no_key" ON "faculty"("employee_no") WHERE "deleted_at" IS NULL',
+  'DROP INDEX IF EXISTS "designations_name_key"',
+  'CREATE UNIQUE INDEX "designations_name_key" ON "designations"("name") WHERE "deleted_at" IS NULL',
+  'DROP INDEX IF EXISTS "faculty_designations_faculty_id_designation_id_term_id_key"',
+  'CREATE UNIQUE INDEX "faculty_designations_faculty_id_designation_id_term_id_key" ON "faculty_designations"("faculty_id", "designation_id", "term_id") WHERE "deleted_at" IS NULL',
 ];
 
 async function main(): Promise<void> {

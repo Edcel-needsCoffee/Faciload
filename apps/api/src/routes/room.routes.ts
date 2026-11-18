@@ -1,6 +1,6 @@
 import { Router, type Request } from 'express';
 import { ApiError } from '../errors/apiError.js';
-import { requireAuth, requireRole } from '../middleware/auth.middleware.js';
+import { requireAuth, requireManagement } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { createRoom, getRoom, listRooms, updateRoom } from '../services/room.service.js';
 import { uuidIdSchema } from '../validation/room.validation.js';
@@ -35,7 +35,7 @@ roomRouter.get(
 roomRouter.post(
   '/rooms',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(201).json({ room: await createRoom(req.body) });
   }),
@@ -46,7 +46,7 @@ roomRouter.post(
 roomRouter.patch(
   '/rooms/:id',
   requireAuth,
-  requireRole('CHAIR'),
+  requireManagement,
   asyncHandler(async (req, res) => {
     res.status(200).json({ room: await updateRoom(parseId(req), req.body) });
   }),

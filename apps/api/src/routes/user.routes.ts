@@ -65,6 +65,7 @@ userRouter.patch(
     const updated = await prisma.user.update({
       where: { id: user.id },
       data: {
+        ...(parsed.data.username !== undefined ? { username: parsed.data.username } : {}),
         ...(parsed.data.email !== undefined ? { email: parsed.data.email } : {}),
         ...(parsed.data.new_password !== undefined
           ? { password_hash: await hashPassword(parsed.data.new_password) }
@@ -75,6 +76,7 @@ userRouter.patch(
       user: {
         id: updated.id,
         email: updated.email,
+        username: updated.username,
         role: updated.role,
         facultyId: updated.faculty_id,
         avatar_url: updated.avatar_url ?? null,

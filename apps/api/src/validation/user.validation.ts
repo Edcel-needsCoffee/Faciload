@@ -3,6 +3,7 @@ import { z } from 'zod';
 /** PATCH /api/users/me — editable credentials for the signed-in account. */
 export const updateMeSchema = z
   .object({
+    username: z.string().trim().min(1).max(80).optional(),
     email: z.string().email('Enter a valid email address').optional(),
     current_password: z.string().min(1, 'Enter your current password').optional(),
     new_password: z
@@ -12,7 +13,7 @@ export const updateMeSchema = z
       .optional(),
   })
   .strict()
-  .refine((data) => data.email !== undefined || data.new_password !== undefined, {
+  .refine((data) => data.username !== undefined || data.email !== undefined || data.new_password !== undefined, {
     message: 'Provide an email or a new password to update',
   })
   .refine(
